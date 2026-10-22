@@ -1,0 +1,157 @@
+# ---------------------------------------------------------------------------
+# Job alert settings. Edit freely.
+# NOTE: if your GitHub repo is PUBLIC (needed for the free tracker website),
+# everything in this file is public too. To keep the salary range private,
+# leave `salary:` as is here and instead paste an override into the
+# JOB_CONFIG secret (see README, "Keeping your salary range private").
+# ---------------------------------------------------------------------------
+
+daily_count: 20            # jobs per message
+max_age_days: 15           # skip anything posted longer ago than this
+max_experience_years: 5    # skip jobs that ask for more than this
+max_per_company: 2         # stops one company filling the whole list
+allow_unknown_date: false  # jobs with no posting date are skipped
+near_match_fill: true      # top up with "near matches" when < daily_count
+strict_min_score: 40       # match % needed for a normal listing
+near_min_score: 25         # match % needed for a near match
+suspicious_listed_max: 5   # how many suspicious jobs to show (separately)
+
+salary:
+  min_lpa: 12
+  max_lpa: 20
+  near_tolerance: 0.20     # up to 20% below the minimum counts as a near match
+  # Approximate conversion to INR for foreign salaries. Update now and then.
+  rates_to_inr: {INR: 1, USD: 88.0, EUR: 102.0, GBP: 118.0, AUD: 57.0, CAD: 64.0, SGD: 66.0, AED: 24.0}
+
+# Hybrid jobs are only accepted in these cities. Onsite jobs are always skipped.
+hybrid_cities: [bengaluru, bangalore]
+
+# Role words. Matching a word in the TITLE scores the full weight.
+roles:
+  high:      # closest to his PIM / product-data background
+    - pim
+    - pxm
+    - product information
+    - product data
+    - product content
+    - master data
+    - mdm
+    - data steward*
+    - catalog*
+    - catalogue*
+    - content operations
+    - digital asset
+    - syndication
+    - product onboarding
+    - stibo
+    - contentserv
+  medium:    # retail / ecommerce operations
+    - ecommerce
+    - e-commerce
+    - category
+    - merchandis*
+    - trading assistant
+    - online trading
+    - assortment
+    - range planning
+    - marketplace
+    - retail operations
+    - vendor management
+    - supplier
+    - procurement
+    - listing*
+    - pricing
+    - product operations
+  low:       # transferable operations roles
+    - operations analyst
+    - operations executive
+    - operations associate
+    - business analyst
+    - data analyst
+    - supply chain
+    - program coordinator
+    - project coordinator
+    - account manager
+    - customer success
+    - implementation
+
+# Tools and skills from his resume (more matches = higher %).
+skills:
+  - stibo
+  - contentserv
+  - content serv
+  - agatha
+  - pim
+  - pxm
+  - brandbank
+  - salesforce
+  - power bi
+  - excel
+  - hubspot
+  - asana
+  - notion
+  - servicenow
+  - jira
+  - scene7
+  - dynamic yield
+  - category management
+  - range planning
+  - vendor management
+  - procurement
+  - pdp
+  - a+ content
+  - merchandising
+  - assortment
+  - sku*
+
+industry:
+  - ecommerce
+  - e-commerce
+  - retail
+  - fmcg
+  - cpg
+  - consumer goods
+  - grocery
+  - marketplace
+  - d2c
+  - supermarket
+  - fashion
+  - apparel
+  - footwear
+  - beauty
+
+# ---------------------------------------------------------------------------
+# Where jobs come from. Only sources that allow automated access are used.
+# LinkedIn and Naukri forbid scraping, so they are NOT used. Set up their own
+# free email alerts as a complement (see README).
+# Each run prints which sources worked; a source that breaks is skipped.
+# ---------------------------------------------------------------------------
+sources:
+  remotive:        # remote job board. Max 4 calls/day allowed, so keep <= 4 queries
+    enabled: true
+    queries: [product data, ecommerce, catalog, operations]
+  remoteok:
+    enabled: true
+  weworkremotely:
+    enabled: true
+  himalayas:
+    enabled: true
+    pages: 5
+  jobicy:
+    enabled: true
+    geos: [india, apac, anywhere]
+  adzuna:          # needs free keys ADZUNA_APP_ID / ADZUNA_APP_KEY, skipped without them
+    enabled: true
+    queries: [product information management, product data, ecommerce operations, catalog management, master data, category operations]
+  # Company career boards. Starter list; unknown names are skipped (404 is logged).
+  # Add any company that uses Greenhouse / Lever / Ashby: the name is in its jobs URL,
+  # e.g. boards.greenhouse.io/<name>, jobs.lever.co/<name>, jobs.ashbyhq.com/<name>.
+  greenhouse:
+    enabled: true
+    companies: [commercetools, bloomreach, salsify, algolia]
+  lever:
+    enabled: true
+    companies: []
+  ashby:
+    enabled: true
+    companies: []

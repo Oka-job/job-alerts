@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Job Tracker</title>
+<style>
+  :root{--bg:#f6f7f9;--card:#fff;--ink:#1c2430;--mute:#677082;--line:#e2e6ec;--acc:#2f6fed;--ok:#1e8a4c;--warn:#b86e00;--bad:#c0362c}
+  @media (prefers-color-scheme:dark){:root{--bg:#12161c;--card:#1b212b;--ink:#e8ecf2;--mute:#9aa4b5;--line:#2a3240;--acc:#6d9bff;--ok:#4cc27e;--warn:#e0a03a;--bad:#ff7a6e}}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:900px;margin:0 auto;padding:16px}
+  h1{font-size:22px;margin:4px 0 12px}
+  .stats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:92px}
+  .stat b{display:block;font-size:20px}.stat span{color:var(--mute);font-size:12px}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  input,select,button,textarea{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+  button{cursor:pointer} button.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+  .grow{flex:1;min-width:160px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+  .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .title{font-weight:600} .sub{color:var(--mute);font-size:13px}
+  .match{font-weight:700;color:var(--ok);white-space:nowrap}
+  .tag{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:999px;padding:1px 8px;margin:4px 4px 0 0;color:var(--mute)}
+  .tag.warn{color:var(--warn);border-color:var(--warn)} .tag.high{color:var(--bad);border-color:var(--bad)}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+  .row textarea{flex:1;min-width:200px;height:34px;resize:vertical}
+  a{color:var(--acc)} .empty{color:var(--mute);text-align:center;padding:30px 0}
+  details{margin:10px 0} summary{cursor:pointer;color:var(--acc)}
+  .note{color:var(--mute);font-size:12px;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Job tracker</h1>
+  <div class="stats" id="stats"></div>
+
+  <div class="bar">
+    <input class="grow" id="q" placeholder="Search title or company">
+    <select id="fstatus"></select>
+    <select id="fsection">
+      <option value="">All lists</option><option value="salary">Salary in range</option>
+      <option value="unlisted">Salary not listed</option><option value="near">Near match</option>
+      <option value="suspicious">Suspicious</option><option value="manual">Added by me</option>
+    </select>
+    <label class="sub"><input type="checkbox" id="hidesus" checked> hide suspicious</label>
+  </div>
+
+  <details>
+    <summary>Add a job I applied to elsewhere</summary>
+    <div class="row">
+      <input id="m_title" placeholder="Job title"><input id="m_company" placeholder="Company">
+      <input class="grow" id="m_url" placeholder="Link (optional)">
+      <button class="primary" id="m_add">Add</button>
+    </div>
+  </details>
+
+  <div id="list"></div>
+
+  <div class="row">
+    <button id="exportCsv">Export CSV</button><button id="exportJson">Back up (JSON)</button>
+    <label><button id="importBtn" type="button">Restore backup</button><input id="importFile" type="file" accept=".json" hidden></label>
+  </div>
+  <p class="note">Your statuses and notes are saved in this browser only (not on a server). Use the backup button
+  before clearing browser data or switching phone/computer. Always check a company and recruiter before sharing documents.</p>
+</div>
+
+<script>
+const STATUSES = ["New","Saved","Applied","Interviewing","Offer","Rejected","Not interested"];
+const KEY = "jobtracker.v1", MKEY = "jobtracker.manual.v1";
+let jobs = [], state = {}, manual = [];
+
+function load(k, d){ try { return JSON.parse(localStorage.getItem(k)) || d; } catch(e){ return d; } }
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); localStorage.setItem(MKEY, JSON.stringify(manual)); } catch(e){} }
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const today = () => new Date().toISOString().slice(0,10);
+
+async function init(){
+  state = load(KEY, {}); manual = load(MKEY, []);
+  try { jobs = await (await fetch("data/jobs.json?" + Date.now())).json(); } catch(e){ jobs = []; }
+  $("fstatus").innerHTML = '<option value="">All statuses</option>' + STATUSES.map(s=>`<option>${s}</option>`).join("");
+  ["q","fstatus","fsection","hidesus"].forEach(id => $(id).addEventListener("input", render));
+  $("m_add").onclick = addManual;
+  $("exportCsv").onclick = exportCsv; $("exportJson").onclick = exportJson;
+  $("importBtn").onclick = () => $("importFile").click();
+  $("importFile").onchange = importJson;
+  render();
+}
+
+function all(){
+  const m = manual.map(x => ({...x, section:"manual", match:null, flags:[], contact:{}, mode:"", salary:"", source:"Added by me"}));
+  return [...jobs, ...m];
+}
+function st(j){ return (state[j.id] || {}).status || "New"; }
+
+function render(){
+  const q = $("q").value.toLowerCase(), fs = $("fstatus").value, fsec = $("fsection").value, hide = $("hidesus").checked;
+  const rows = all().filter(j =>
+    (!q || (j.title + " " + j.company).toLowerCase().includes(q)) &&
+    (!fs || st(j) === fs) && (!fsec || j.section === fsec) &&
+    !(hide && j.section === "suspicious" && !fsec));
+  const cnt = s => all().filter(j => st(j) === s).length;
+  $("stats").innerHTML = [["Total", all().length],["Applied", cnt("Applied")],["Interviewing", cnt("Interviewing")],
+    ["Offers", cnt("Offer")],["Rejected", cnt("Rejected")]].map(([a,b]) => `<div class="stat"><b>${b}</b><span>${a}</span></div>`).join("");
+  $("list").innerHTML = rows.length ? rows.map(card).join("") : '<div class="empty">No jobs yet. Jobs appear here after the first daily run.</div>';
+  document.querySelectorAll("[data-id]").forEach(el => {
+    const id = el.dataset.id;
+    el.querySelector("select").onchange = e => { set(id, {status: e.target.value, ...(e.target.value === "Applied" && !(state[id]||{}).appliedOn ? {appliedOn: today()} : {})}); };
+    el.querySelector("textarea").onchange = e => set(id, {notes: e.target.value}, false);
+    const del = el.querySelector(".del"); if (del) del.onclick = () => { manual = manual.filter(x => x.id !== id); save(); render(); };
+  });
+}
+function set(id, patch, redraw = true){ state[id] = {...(state[id]||{}), ...patch, updatedOn: today()}; save(); if (redraw) render(); }
+
+function card(j){
+  const s = state[j.id] || {}, c = j.contact || {};
+  const contact = [...(c.emails||[]), ...(c.phones||[]), ...(c.linkedin||[])].join(", ");
+  const tags = [j.mode && (j.mode === "hybrid" ? "Hybrid" : "Remote"), j.contract && "Contract", j.salary, j.section === "near" && "Near match",
+    j.eligibility === "unclear" && "Check India eligibility"].filter(Boolean).map(t => `<span class="tag">${esc(t)}</span>`).join("");
+  const flags = (j.flags||[]).map(f => `<span class="tag ${f.level}">${esc(f.text)}</span>`).join("");
+  return `<div class="card" data-id="${esc(j.id)}">
+    <div class="top"><div><div class="title">${esc(j.title)}</div><div class="sub">${esc(j.company)} · ${esc(j.source)}${j.sent_on ? " · sent " + esc(j.sent_on) : ""}${j.posted ? " · posted " + esc(j.posted) : ""}</div></div>
+    ${j.match != null ? `<div class="match">${j.match}%</div>` : ""}</div>
+    <div>${tags}${flags}</div>
+    ${contact ? `<div class="sub">Contact: ${esc(contact)}</div>` : ""}
+    <div class="row">
+      ${j.url ? `<a href="${esc(j.url)}" target="_blank" rel="noopener noreferrer">Open &amp; apply</a>` : ""}
+      <select>${STATUSES.map(x => `<option ${x === (s.status||"New") ? "selected" : ""}>${x}</option>`).join("")}</select>
+      ${s.appliedOn ? `<span class="sub">applied ${esc(s.appliedOn)}</span>` : ""}
+      ${j.section === "manual" ? '<button class="del" title="Remove">Remove</button>' : ""}
+      <textarea placeholder="Notes (recruiter, interview dates...)">${esc(s.notes || "")}</textarea>
+    </div></div>`;
+}
+
+function addManual(){
+  const title = $("m_title").value.trim(), company = $("m_company").value.trim(), url = $("m_url").value.trim();
+  if (!title) return;
+  const id = "m" + Date.now();
+  manual.unshift({id, title, company: company || "Unknown company", url: /^https?:\/\//.test(url) ? url : "", sent_on: today()});
+  state[id] = {status: "Applied", appliedOn: today(), updatedOn: today()};
+  ["m_title","m_company","m_url"].forEach(i => $(i).value = ""); save(); render();
+}
+
+function download(name, text, type){
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; a.click();
+}
+function exportCsv(){
+  const q = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+  const head = ["Title","Company","Status","Applied on","Match %","Salary","Source","Link","Notes"];
+  const rows = all().map(j => { const s = state[j.id] || {};
+    return [j.title, j.company, st(j), s.appliedOn || "", j.match ?? "", j.salary || "", j.source, j.url || "", s.notes || ""].map(q).join(","); });
+  download("job-applications.csv", [head.map(q).join(","), ...rows].join("\n"), "text/csv");
+}
+function exportJson(){ download("job-tracker-backup.json", JSON.stringify({state, manual}), "application/json"); }
+function importJson(e){
+  const f = e.target.files[0]; if (!f) return;
+  f.text().then(t => { const d = JSON.parse(t); state = d.state || {}; manual = d.manual || []; save(); render(); }).catch(() => alert("That file could not be read."));
+}
+init();
+</script>
+</body>
+</html>
