@@ -1,1 +1,24 @@
-[]
+[
+ {
+  "id": "973ec0043af9fe2d",
+  "title": "Manager, Professional Services",
+  "company": "Collibra",
+  "location": "Anywhere in the World",
+  "mode": "remote",
+  "eligibility": "yes",
+  "url": "https://weworkremotely.com/remote-jobs/collibra-manager-professional-services",
+  "posted": "2026-10-17",
+  "salary": "113-141 LPA",
+  "match": 56,
+  "section": "salary",
+  "contract": false,
+  "flags": [],
+  "contact": {
+   "emails": [],
+   "phones": [],
+   "linkedin": []
+  },
+  "source": "WeWorkRemotely",
+  "sent_on": "2026-10-23"
+ }
+]
