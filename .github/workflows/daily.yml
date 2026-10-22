@@ -38,6 +38,8 @@ jobs:
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
           ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
+          JOOBLE_KEY: ${{ secrets.JOOBLE_KEY }}
           JOB_CONFIG: ${{ secrets.JOB_CONFIG }}
           TRACKER_URL: ${{ vars.TRACKER_URL }}
         run: python -m jobalerts.main
