@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Job Tracker</title>
+<style>
+  :root{--bg:#f6f3fb;--card:#ffffff;--ink:#2b2d42;--mute:#6f7389;--line:#e6e1f0;--acc:#7a8cf0;--accd:#5b6ee0}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:920px;margin:0 auto;padding:16px}
+  h1{font-size:24px;margin:4px 0 12px;color:#4a4e8a}
+  .stats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .stat{border-radius:12px;padding:8px 14px;min-width:96px}
+  .stat b{display:block;font-size:20px}.stat span{font-size:12px;opacity:.8}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+  input,select,button,textarea{font:inherit;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+  button{cursor:pointer} button.primary{background:var(--accd);border-color:var(--accd);color:#fff}
+  .grow{flex:1;min-width:160px}
+  .card{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--bar,#d9d3ea);border-radius:14px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(80,70,130,.06)}
+  .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .title{font-weight:600} .sub{color:var(--mute);font-size:13px}
+  .pill{display:inline-block;font-size:12px;border-radius:999px;padding:2px 10px;margin:5px 5px 0 0;font-weight:500}
+  .match{font-weight:700;border-radius:999px;padding:3px 11px;white-space:nowrap}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+  .row textarea{flex:1;min-width:200px;height:34px;resize:vertical}
+  .rate{width:84px} a{color:var(--accd)} .empty{color:var(--mute);text-align:center;padding:30px 0}
+  details{margin:10px 0} summary{cursor:pointer;color:var(--accd)}
+  .note{color:var(--mute);font-size:12px;margin-top:14px}
+  #syncbox{background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin-bottom:12px;font-size:13px}
+  /* palette: every colour used for a label is defined here */
+  .c-toapply{background:#e4e6eb;color:#4b5060}.c-applied{background:#bcd7ff;color:#1b4a94}
+  .c-interview{background:#fff0b3;color:#7a5d00}.c-offer{background:#bfe8cc;color:#1d6b3a}
+  .c-rejected{background:#2b2f3a;color:#fff}.c-noresponse{background:#f4b9b9;color:#8a1f1f}
+  .c-notinterested{background:#4a4f5c;color:#fff}.c-expired{background:#6a6f7d;color:#fff}
+  .c-remote{background:#d3f0dc;color:#1f6b3b}.c-hybrid{background:#d4ecf8;color:#1d5d85}
+  .c-contract{background:#ffd9b0;color:#8a4b00}.c-old{background:#f9cdc3;color:#9a2f1c}
+  .c-nosalary{background:#fde0e0;color:#a32b2b}.c-salary{background:#e6e8ec;color:#555b6b}
+  .c-alert{background:#f9cfe4;color:#92336a}.c-suspicious{background:#ffc58a;color:#7a3d00}
+  .c-m80{background:#a8e0b9;color:#17572f}.c-m65{background:#d6f0c8;color:#3d6b24}.c-m50{background:#e1ebfa;color:#2f5aa0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Job tracker</h1>
+  <div class="stats" id="stats"></div>
+  <div id="syncbox"></div>
+
+  <div class="bar">
+    <input class="grow" id="q" placeholder="Search title or company">
+    <select id="fstatus"></select>
+    <select id="fsection">
+      <option value="">All lists</option><option value="salary">Salary in range</option>
+      <option value="unlisted">No salary mentioned</option><option value="near">Near match</option>
+      <option value="suspicious">Suspicious</option><option value="manual">Added by me</option>
+    </select>
+    <label class="sub"><input type="checkbox" id="hidesus" checked> hide suspicious</label>
+    <label class="sub"><input type="checkbox" id="hidedone" checked> hide not interested / expired</label>
+  </div>
+
+  <details>
+    <summary>Add a job I applied to elsewhere</summary>
+    <div class="row">
+      <input id="m_title" placeholder="Job title"><input id="m_company" placeholder="Company">
+      <input class="grow" id="m_url" placeholder="Link (optional)">
+      <button class="primary" id="m_add">Add</button>
+    </div>
+  </details>
+
+  <div id="list"></div>
+
+  <div class="row">
+    <button id="exportCsv">Export CSV</button><button id="exportJson">Back up (JSON)</button>
+    <label><button id="importBtn" type="button">Restore backup</button><input id="importFile" type="file" accept=".json" hidden></label>
+  </div>
+  <p class="note">Always check a company and recruiter before sharing documents. Ratings are typed in by you after using the "Check ratings" links.</p>
+</div>
+<script src="sync-config.js"></script>
+<script>
+const STATUSES = [["To apply","c-toapply"],["Applied","c-applied"],["Interview","c-interview"],["Offer","c-offer"],
+  ["Rejected","c-rejected"],["No response","c-noresponse"],["Not interested","c-notinterested"],["Job expired","c-expired"]];
+const SCLASS = Object.fromEntries(STATUSES);
+const OLDMAP = {"New":"To apply","Saved":"To apply","Interviewing":"Interview"};
+const KEY = "jobtracker.v1", MKEY = "jobtracker.manual.v1", CKEY = "jobtracker.synccode";
+let jobs = [], state = {}, manual = [], syncCode = "", syncMsg = "", pushTimer = null;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const today = () => new Date().toISOString().slice(0,10);
+function load(k, d){ try { return JSON.parse(localStorage.getItem(k)) || d; } catch(e){ return d; } }
+function saveLocal(){ try { localStorage.setItem(KEY, JSON.stringify(state)); localStorage.setItem(MKEY, JSON.stringify(manual)); } catch(e){} }
+function save(){ saveLocal(); schedulePush(); }
+
+/* ---------------- sync (free Firebase Firestore, optional) ---------------- */
+const cfg = () => (window.SYNC || {});
+const syncOn = () => !!(cfg().projectId && cfg().apiKey && syncCode);
+const docUrl = () => `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(cfg().projectId)}/databases/(default)/documents/trackers/${encodeURIComponent(syncCode)}?key=${encodeURIComponent(cfg().apiKey)}`;
+function mergeData(a, b){
+  const pick = (x, y) => ((y && (y.ts||0) > ((x && x.ts)||0)) ? y : (x || y));
+  const st = {}; for (const id of new Set([...Object.keys(a.state||{}), ...Object.keys(b.state||{})])) st[id] = pick((a.state||{})[id], (b.state||{})[id]);
+  const m = {}; for (const x of [...(b.manual||[]), ...(a.manual||[])]) { const cur = m[x.id]; m[x.id] = (!cur || (x.ts||0) > (cur.ts||0)) ? x : cur; }
+  return {state: st, manual: Object.values(m).sort((p,q) => (q.ts||0) - (p.ts||0))};
+}
+async function pull(){
+  if (!syncOn()) return;
+  try {
+    const r = await fetch(docUrl());
+    let remote = {state:{}, manual:[]};
+    if (r.ok) { const j = await r.json(); remote = JSON.parse(j.fields.data.stringValue); }
+    else if (r.status !== 404) throw new Error(r.status);
+    const merged = mergeData({state, manual}, remote);
+    state = merged.state; manual = merged.manual; saveLocal();
+    if (JSON.stringify(merged) !== JSON.stringify(remote)) await push();
+    syncMsg = "Synced " + new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  } catch(e){ syncMsg = "Could not sync just now. Your changes are saved on this device and will sync later."; }
+  renderSync(); render();
+}
+async function push(){
+  if (!syncOn()) return;
+  try {
+    const r = await fetch(docUrl() + "&updateMask.fieldPaths=data", {method:"PATCH", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({fields:{data:{stringValue: JSON.stringify({state, manual})}}})});
+    if (!r.ok) throw new Error(r.status);
+    syncMsg = "Synced " + new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  } catch(e){ syncMsg = "Could not sync just now. Your changes are saved on this device and will sync later."; }
+  renderSync();
+}
+function schedulePush(){ if (!syncOn()) return; clearTimeout(pushTimer); pushTimer = setTimeout(push, 800); }
+function renderSync(){
+  const box = $("syncbox");
+  if (!(cfg().projectId && cfg().apiKey)) { box.innerHTML = "Saved on this device only. To use the same tracker on your phone and laptop, finish the sync setup."; return; }
+  if (!syncCode) { box.innerHTML = 'Type your sync code to use the same tracker on all your devices: <input id="codein" placeholder="your secret sync code"> <button class="primary" id="codego">Connect</button>'; $("codego").onclick = () => { const v = $("codein").value.trim(); if (v.length >= 8) { syncCode = v; try { localStorage.setItem(CKEY, v); } catch(e){} pull(); } else alert("Use at least 8 characters."); }; return; }
+  box.innerHTML = `Sync on across devices. ${esc(syncMsg)} <button id="codeoff">Disconnect this device</button>`;
+  $("codeoff").onclick = () => { syncCode = ""; try { localStorage.removeItem(CKEY); } catch(e){} syncMsg = ""; renderSync(); };
+}
+
+/* ---------------- page ---------------- */
+async function init(){
+  state = load(KEY, {}); manual = load(MKEY, []);
+  for (const id in state) if (OLDMAP[state[id].status]) state[id].status = OLDMAP[state[id].status];
+  try { syncCode = localStorage.getItem(CKEY) || ""; } catch(e){}
+  try { jobs = await (await fetch("data/jobs.json?" + Date.now())).json(); } catch(e){ jobs = []; }
+  $("fstatus").innerHTML = '<option value="">All statuses</option>' + STATUSES.map(s=>`<option>${s[0]}</option>`).join("");
+  ["q","fstatus","fsection","hidesus","hidedone"].forEach(id => $(id).addEventListener("input", render));
+  $("m_add").onclick = addManual;
+  $("exportCsv").onclick = exportCsv; $("exportJson").onclick = exportJson;
+  $("importBtn").onclick = () => $("importFile").click();
+  $("importFile").onchange = importJson;
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) pull(); });
+  renderSync(); render(); pull();
+}
+
+function all(){
+  const m = manual.filter(x => !x.deleted).map(x => ({...x, section:"manual", match:null, flags:[], contact:{}, mode:"", salary:"", source:"Added by me"}));
+  return [...jobs, ...m];
+}
+function st(j){ return (state[j.id] || {}).status || "To apply"; }
+function band(m){ return m >= 80 ? "c-m80" : m >= 65 ? "c-m65" : "c-m50"; }
+
+function render(){
+  const q = $("q").value.toLowerCase(), fs = $("fstatus").value, fsec = $("fsection").value, hide = $("hidesus").checked, hd = $("hidedone").checked;
+  const rows = all().filter(j =>
+    (!q || (j.title + " " + j.company).toLowerCase().includes(q)) &&
+    (!fs || st(j) === fs) && (!fsec || j.section === fsec) &&
+    !(hide && j.section === "suspicious" && !fsec) &&
+    !(hd && !fs && ["Not interested","Job expired"].includes(st(j))));
+  const cnt = s => all().filter(j => st(j) === s).length;
+  const stat = (a, n, c) => `<div class="stat ${c}"><b>${n}</b><span>${a}</span></div>`;
+  $("stats").innerHTML = stat("Total", all().length, "c-salary") + stat("To apply", cnt("To apply"), "c-toapply") + stat("Applied", cnt("Applied"), "c-applied") +
+    stat("Interview", cnt("Interview"), "c-interview") + stat("Offers", cnt("Offer"), "c-offer") + stat("Rejected", cnt("Rejected"), "c-rejected");
+  $("list").innerHTML = rows.length ? rows.map(card).join("") : '<div class="empty">No jobs to show. Jobs appear here after each daily run.</div>';
+  document.querySelectorAll("[data-id]").forEach(el => {
+    const id = el.dataset.id;
+    el.querySelector("select").onchange = e => { set(id, {status: e.target.value, ...(e.target.value === "Applied" && !(state[id]||{}).appliedOn ? {appliedOn: today()} : {})}); };
+    el.querySelector("textarea").onchange = e => set(id, {notes: e.target.value}, false);
+    el.querySelector(".gd").onchange = e => set(id, {gd: e.target.value}, false);
+    el.querySelector(".ab").onchange = e => set(id, {ab: e.target.value}, false);
+    const del = el.querySelector(".del");
+    if (del) del.onclick = () => { manual = manual.map(x => x.id === id ? {...x, deleted:true, ts:Date.now()} : x); save(); render(); };
+  });
+}
+function set(id, patch, redraw = true){ state[id] = {...(state[id]||{}), ...patch, updatedOn: today(), ts: Date.now()}; save(); if (redraw) render(); }
+
+function card(j){
+  const s = state[j.id] || {}, c = j.contact || {}, status = s.status || "To apply";
+  const contact = [...(c.emails||[]), ...(c.phones||[]), ...(c.linkedin||[])].join(", ");
+  const old = j.posted && (Date.now() - new Date(j.posted)) / 864e5 > 30;
+  const nosal = !j.salary || j.salary === "Salary not listed" || j.salary === "No salary mentioned";
+  const fromAlert = j.from_alert || /alert/i.test(j.source || "") || (j.flags||[]).some(f => /job-alert email/i.test(f.text));
+  const pills = [];
+  if (j.mode) pills.push([j.mode === "hybrid" ? "Hybrid" : "Remote", j.mode === "hybrid" ? "c-hybrid" : "c-remote"]);
+  if (j.contract) pills.push(["Contract","c-contract"]);
+  if (j.section !== "manual") pills.push(nosal ? ["No salary mentioned","c-nosalary"] : [j.salary,"c-salary"]);
+  if (old) pills.push(["Old posting (may be filled)","c-old"]);
+  if (fromAlert) pills.push(["From alert email","c-alert"]);
+  if (j.section === "suspicious") pills.push(["Flagged as suspicious","c-suspicious"]);
+  if (j.eligibility === "unclear") pills.push(["Check India eligibility","c-suspicious"]);
+  const tags = pills.map(([t,cl]) => `<span class="pill ${cl}">${esc(t)}</span>`).join("");
+  const flags = (j.flags||[]).filter(f => !/job-alert email/i.test(f.text)).map(f => `<span class="pill c-suspicious">${esc(f.text)}</span>`).join("");
+  const co = encodeURIComponent(j.company || "");
+  const barc = {"c-applied":"#bcd7ff","c-interview":"#ffe58a","c-offer":"#9fdcb5","c-rejected":"#2b2f3a","c-noresponse":"#f4b9b9","c-notinterested":"#4a4f5c","c-expired":"#6a6f7d"}[SCLASS[status]] || "#d9d3ea";
+  return `<div class="card" data-id="${esc(j.id)}" style="--bar:${barc}">
+    <div class="top"><div><div class="title">${esc(j.title)}</div><div class="sub">${esc(j.company)} · ${esc(j.source)}${j.sent_on ? " · sent " + esc(j.sent_on) : ""}${j.posted ? " · posted " + esc(j.posted) : ""}</div></div>
+    ${j.match != null ? `<div class="match ${band(j.match)}">${j.match}%</div>` : ""}</div>
+    <div>${tags}${flags}</div>
+    ${contact ? `<div class="sub">Contact: ${esc(contact)}</div>` : ""}
+    <div class="row">
+      ${j.url ? `<a href="${esc(j.url)}" target="_blank" rel="noopener noreferrer">Open &amp; apply</a>` : ""}
+      <select class="pill ${SCLASS[status]}" style="margin:0">${STATUSES.map(x => `<option ${x[0] === status ? "selected" : ""}>${x[0]}</option>`).join("")}</select>
+      ${s.appliedOn ? `<span class="sub">applied ${esc(s.appliedOn)}</span>` : ""}
+      ${j.section === "manual" ? '<button class="del" title="Remove">Remove</button>' : ""}
+    </div>
+    <div class="row">
+      <span class="sub">Check ratings:</span>
+      <a href="https://www.google.com/search?q=${co}+glassdoor+reviews" target="_blank" rel="noopener noreferrer">Glassdoor</a>
+      <a href="https://www.google.com/search?q=${co}+ambitionbox+reviews" target="_blank" rel="noopener noreferrer">AmbitionBox</a>
+      <input class="rate gd" type="number" min="0" max="5" step="0.1" placeholder="GD ★" value="${esc(s.gd || "")}">
+      <input class="rate ab" type="number" min="0" max="5" step="0.1" placeholder="AB ★" value="${esc(s.ab || "")}">
+      <textarea placeholder="Notes (recruiter, interview dates...)">${esc(s.notes || "")}</textarea>
+    </div></div>`;
+}
+
+function addManual(){
+  const title = $("m_title").value.trim(), company = $("m_company").value.trim(), url = $("m_url").value.trim();
+  if (!title) return;
+  const id = "m" + Date.now();
+  manual.unshift({id, title, company: company || "Unknown company", url: /^https?:\/\//.test(url) ? url : "", sent_on: today(), ts: Date.now()});
+  state[id] = {status: "Applied", appliedOn: today(), updatedOn: today(), ts: Date.now()};
+  ["m_title","m_company","m_url"].forEach(i => $(i).value = ""); save(); render();
+}
+
+function download(name, text, type){
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; a.click();
+}
+function exportCsv(){
+  const q = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+  const head = ["Title","Company","Status","Applied on","Match %","Salary","Glassdoor","AmbitionBox","Source","Link","Notes"];
+  const rows = all().map(j => { const s = state[j.id] || {};
+    return [j.title, j.company, st(j), s.appliedOn || "", j.match ?? "", j.salary || "", s.gd || "", s.ab || "", j.source, j.url || "", s.notes || ""].map(q).join(","); });
+  download("job-applications.csv", [head.map(q).join(","), ...rows].join("\n"), "text/csv");
+}
+function exportJson(){ download("job-tracker-backup.json", JSON.stringify({state, manual}), "application/json"); }
+function importJson(e){
+  const f = e.target.files[0]; if (!f) return;
+  f.text().then(t => { const d = JSON.parse(t); state = d.state || {}; manual = d.manual || []; save(); render(); }).catch(() => alert("That file could not be read."));
+}
+init();
+</script>
+</body>
+</html>
