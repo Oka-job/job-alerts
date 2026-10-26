@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
-<title>Job Tracker</title>
+<title>Oku Job Tracker</title>
 <style>
   :root{--bg:#f6f3fb;--card:#ffffff;--ink:#2b2d42;--mute:#6f7389;--line:#e6e1f0;--acc:#7a8cf0;--accd:#5b6ee0}
-  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  *{box-sizing:border-box} body{margin:0;background-color:#fdf3f6;background-image:radial-gradient(circle at 20px 20px,rgba(255,190,110,.30) 2px,transparent 3px),radial-gradient(circle at 60px 60px,rgba(150,170,255,.22) 2px,transparent 3px),linear-gradient(135deg,#fff0f6 0%,#eef2ff 45%,#fff7de 100%);background-size:80px 80px,80px 80px,100% 100%;background-attachment:fixed;color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
   .wrap{max-width:920px;margin:0 auto;padding:16px}
   h1{font-size:24px;margin:4px 0 12px;color:#4a4e8a}
   .stats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
@@ -29,20 +29,20 @@
   .note{color:var(--mute);font-size:12px;margin-top:14px}
   #syncbox{background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin-bottom:12px;font-size:13px}
   /* palette: every colour used for a label is defined here */
-  .c-toapply{background:#e4e6eb;color:#4b5060}.c-applied{background:#bcd7ff;color:#1b4a94}
-  .c-interview{background:#fff0b3;color:#7a5d00}.c-offer{background:#bfe8cc;color:#1d6b3a}
-  .c-rejected{background:#2b2f3a;color:#fff}.c-noresponse{background:#f4b9b9;color:#8a1f1f}
+  .c-toapply{background:#ffe97a;color:#6b5600}.c-applied{background:#a9cdff;color:#1b4a94}
+  .c-interview{background:#ffb870;color:#6b3300}.c-offer{background:#bfe8cc;color:#1d6b3a}
+  .c-rejected{background:#e05252;color:#fff}.c-noresponse{background:#f4b9b9;color:#8a1f1f}
   .c-notinterested{background:#4a4f5c;color:#fff}.c-expired{background:#6a6f7d;color:#fff}
   .c-remote{background:#d3f0dc;color:#1f6b3b}.c-hybrid{background:#d4ecf8;color:#1d5d85}
-  .c-contract{background:#ffd9b0;color:#8a4b00}.c-old{background:#f9cdc3;color:#9a2f1c}
+  .c-contract{background:#ffe3c7;color:#8a4b00}.c-old{background:#f9cdc3;color:#9a2f1c}
   .c-nosalary{background:#fde0e0;color:#a32b2b}.c-salary{background:#e6e8ec;color:#555b6b}
-  .c-alert{background:#f9cfe4;color:#92336a}.c-suspicious{background:#ffc58a;color:#7a3d00}
+  .c-alert{background:#f9cfe4;color:#92336a}.c-suspicious{background:#f7a967;color:#6b2f00}
   .c-m80{background:#a8e0b9;color:#17572f}.c-m65{background:#d6f0c8;color:#3d6b24}.c-m50{background:#e1ebfa;color:#2f5aa0}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Job tracker</h1>
+  <h1>Oku Job Tracker ⭐</h1>
   <div class="stats" id="stats"></div>
   <div id="syncbox"></div>
 
@@ -50,6 +50,10 @@
     <select id="fdate" title="Day the jobs were sent"></select>
     <input class="grow" id="q" placeholder="Search title or company">
     <select id="fstatus"></select>
+    <select id="fmode">
+      <option value="">Remote + hybrid</option><option value="remote">Remote</option>
+      <option value="hyb-blr">Hybrid, Bengaluru</option><option value="hyb-mum">Hybrid, Mumbai</option>
+    </select>
     <select id="fsection">
       <option value="">All lists</option><option value="salary">Salary in range</option>
       <option value="unlisted">No salary mentioned</option><option value="near">Near match</option>
@@ -142,7 +146,7 @@ async function init(){
   try { syncCode = localStorage.getItem(CKEY) || ""; } catch(e){}
   try { jobs = await (await fetch("data/jobs.json?" + Date.now())).json(); } catch(e){ jobs = []; }
   $("fstatus").innerHTML = '<option value="">All statuses</option>' + STATUSES.map(s=>`<option>${s[0]}</option>`).join("");
-  ["q","fdate","fstatus","fsection","hidesus","hidedone"].forEach(id => $(id).addEventListener("input", render));
+  ["q","fdate","fstatus","fmode","fsection","hidesus","hidedone"].forEach(id => $(id).addEventListener("input", render));
   $("m_add").onclick = addManual;
   $("exportCsv").onclick = exportCsv; $("exportJson").onclick = exportJson;
   $("importBtn").onclick = () => $("importFile").click();
@@ -165,13 +169,21 @@ function all(){
   return [...jobs, ...m];
 }
 function st(j){ return (state[j.id] || {}).status || "To apply"; }
+const BLR = /bengaluru|bangalore|bengalore/i;
+function hybridCity(j){
+  const loc = j.location || "";
+  if (BLR.test(loc)) return "Bengaluru";
+  if (/mumbai|thane|navi|andheri|powai|goregaon|malad|bandra|worli|lower parel|vikhroli|kurla|airoli|vashi|belapur|mahape|ghansoli|bkc/i.test(loc)) return "Mumbai";
+  return loc.split(",")[0].trim();
+}
+function modeKey(j){ if (j.mode === "remote") return "remote"; if (j.mode === "hybrid") return hybridCity(j) === "Bengaluru" ? "hyb-blr" : hybridCity(j) === "Mumbai" ? "hyb-mum" : "hyb-other"; return ""; }
 function band(m){ return m >= 80 ? "c-m80" : m >= 65 ? "c-m65" : "c-m50"; }
 
 function render(){
   const q = $("q").value.toLowerCase(), fs = $("fstatus").value, fsec = $("fsection").value, hide = $("hidesus").checked, hd = $("hidedone").checked;
-  const fd = $("fdate").value;
+  const fd = $("fdate").value, fm = $("fmode").value;
   const rows = all().filter(j =>
-    (!fd || (j.sent_on || "Unknown") === fd) &&
+    (!fd || (j.sent_on || "Unknown") === fd) && (!fm || modeKey(j) === fm) &&
     (!q || (j.title + " " + j.company).toLowerCase().includes(q)) &&
     (!fs || st(j) === fs) && (!fsec || j.section === fsec) &&
     !(hide && j.section === "suspicious" && !fsec) &&
@@ -200,7 +212,7 @@ function card(j){
   const nosal = !j.salary || j.salary === "Salary not listed" || j.salary === "No salary mentioned";
   const fromAlert = j.from_alert || /alert/i.test(j.source || "") || (j.flags||[]).some(f => /job-alert email/i.test(f.text));
   const pills = [];
-  if (j.mode) pills.push([j.mode === "hybrid" ? "Hybrid" : "Remote", j.mode === "hybrid" ? "c-hybrid" : "c-remote"]);
+  if (j.mode) pills.push([j.mode === "hybrid" ? "Hybrid · " + (hybridCity(j) || "check city") : "Remote", j.mode === "hybrid" ? "c-hybrid" : "c-remote"]);
   if (j.contract) pills.push(["Contract","c-contract"]);
   if (j.section !== "manual") pills.push(nosal ? ["No salary mentioned","c-nosalary"] : [j.salary,"c-salary"]);
   if (old) pills.push(["Old posting (may be filled)","c-old"]);
@@ -210,7 +222,7 @@ function card(j){
   const tags = pills.map(([t,cl]) => `<span class="pill ${cl}">${esc(t)}</span>`).join("");
   const flags = (j.flags||[]).filter(f => !/job-alert email/i.test(f.text)).map(f => `<span class="pill c-suspicious">${esc(f.text)}</span>`).join("");
   const co = encodeURIComponent(j.company || "");
-  const barc = {"c-applied":"#bcd7ff","c-interview":"#ffe58a","c-offer":"#9fdcb5","c-rejected":"#2b2f3a","c-noresponse":"#f4b9b9","c-notinterested":"#4a4f5c","c-expired":"#6a6f7d"}[SCLASS[status]] || "#d9d3ea";
+  const barc = {"c-toapply":"#ffe97a","c-applied":"#a9cdff","c-interview":"#ffb870","c-offer":"#9fdcb5","c-rejected":"#e05252","c-noresponse":"#f4b9b9","c-notinterested":"#4a4f5c","c-expired":"#6a6f7d"}[SCLASS[status]] || "#d9d3ea";
   return `<div class="card" data-id="${esc(j.id)}" style="--bar:${barc}">
     <div class="top"><div><div class="title">${esc(j.title)}</div><div class="sub">${esc(j.company)} · ${esc(j.source)}${j.sent_on ? " · sent " + esc(j.sent_on) : ""}${j.posted ? " · posted " + esc(j.posted) : ""}</div></div>
     ${j.match != null ? `<div class="match ${band(j.match)}">${j.match}%</div>` : ""}</div>
