@@ -47,6 +47,7 @@
   <div id="syncbox"></div>
 
   <div class="bar">
+    <select id="fdate" title="Day the jobs were sent"></select>
     <input class="grow" id="q" placeholder="Search title or company">
     <select id="fstatus"></select>
     <select id="fsection">
@@ -109,7 +110,7 @@ async function pull(){
     if (r.ok) { const j = await r.json(); remote = JSON.parse(j.fields.data.stringValue); }
     else if (r.status !== 404) throw new Error(r.status);
     const merged = mergeData({state, manual}, remote);
-    state = merged.state; manual = merged.manual; saveLocal();
+    state = merged.state; manual = merged.manual; saveLocal(); dateOptions(false);
     if (JSON.stringify(merged) !== JSON.stringify(remote)) await push();
     syncMsg = "Synced " + new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
   } catch(e){ syncMsg = "Could not sync just now. Your changes are saved on this device and will sync later."; }
@@ -141,13 +142,22 @@ async function init(){
   try { syncCode = localStorage.getItem(CKEY) || ""; } catch(e){}
   try { jobs = await (await fetch("data/jobs.json?" + Date.now())).json(); } catch(e){ jobs = []; }
   $("fstatus").innerHTML = '<option value="">All statuses</option>' + STATUSES.map(s=>`<option>${s[0]}</option>`).join("");
-  ["q","fstatus","fsection","hidesus","hidedone"].forEach(id => $(id).addEventListener("input", render));
+  ["q","fdate","fstatus","fsection","hidesus","hidedone"].forEach(id => $(id).addEventListener("input", render));
   $("m_add").onclick = addManual;
   $("exportCsv").onclick = exportCsv; $("exportJson").onclick = exportJson;
   $("importBtn").onclick = () => $("importFile").click();
   $("importFile").onchange = importJson;
   document.addEventListener("visibilitychange", () => { if (!document.hidden) pull(); });
+  dateOptions(true);
   renderSync(); render(); pull();
+}
+function fmtDate(d){ const t = new Date(d + "T00:00:00"); return isNaN(t) ? d : t.toLocaleDateString("en-GB", {weekday:"short", day:"numeric", month:"short", year:"numeric"}); }
+function dateOptions(first){
+  const sel = $("fdate"), keep = sel.value, counts = {};
+  all().forEach(j => { const d = j.sent_on || "Unknown"; counts[d] = (counts[d]||0) + 1; });
+  const days = Object.keys(counts).sort().reverse();
+  sel.innerHTML = '<option value="">All days</option>' + days.map(d => `<option value="${esc(d)}">${esc(d === "Unknown" ? d : fmtDate(d))} (${counts[d]} jobs)</option>`).join("");
+  sel.value = first ? (days[0] || "") : (days.includes(keep) ? keep : "");
 }
 
 function all(){
@@ -159,7 +169,9 @@ function band(m){ return m >= 80 ? "c-m80" : m >= 65 ? "c-m65" : "c-m50"; }
 
 function render(){
   const q = $("q").value.toLowerCase(), fs = $("fstatus").value, fsec = $("fsection").value, hide = $("hidesus").checked, hd = $("hidedone").checked;
+  const fd = $("fdate").value;
   const rows = all().filter(j =>
+    (!fd || (j.sent_on || "Unknown") === fd) &&
     (!q || (j.title + " " + j.company).toLowerCase().includes(q)) &&
     (!fs || st(j) === fs) && (!fsec || j.section === fsec) &&
     !(hide && j.section === "suspicious" && !fsec) &&
@@ -225,6 +237,7 @@ function addManual(){
   if (!title) return;
   const id = "m" + Date.now();
   manual.unshift({id, title, company: company || "Unknown company", url: /^https?:\/\//.test(url) ? url : "", sent_on: today(), ts: Date.now()});
+  dateOptions(false);
   state[id] = {status: "Applied", appliedOn: today(), updatedOn: today(), ts: Date.now()};
   ["m_title","m_company","m_url"].forEach(i => $(i).value = ""); save(); render();
 }
