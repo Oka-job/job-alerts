@@ -1,5 +1,56 @@
 [
  {
+  "id": "c4205e9caef57332",
+  "title": "Product Data Officer (Medical Devices) - Hybrid / Temporary Contract",
+  "company": "IQVIA India",
+  "location": "Anywhere",
+  "mode": "remote",
+  "eligibility": "yes",
+  "url": "https://www.aimjobs.ai/jobs/product-data-officer-medical-devices---hybrid--temporary-contract-iqvia-india-madrid-63b2895be767ea83f66587afe9a80c7b7ffe2663f4cd3c9e45689bce280c4e0e?utm_campaign=google_jobs_apply&utm_source=google_jobs_apply&utm_medium=organic",
+  "posted": null,
+  "salary": "No salary mentioned",
+  "match": 72,
+  "section": "unlisted",
+  "contract": true,
+  "from_alert": false,
+  "flags": [],
+  "contact": {
+   "emails": [],
+   "phones": [],
+   "linkedin": []
+  },
+  "source": "Google Jobs",
+  "sent_on": "2026-11-07"
+ },
+ {
+  "id": "8e4345007a3fe6dd",
+  "title": "E-Commerce Manager",
+  "company": "Webpatshala",
+  "location": "Remote",
+  "mode": "remote",
+  "eligibility": "yes",
+  "url": "https://in.indeed.com/viewjob?jk=76ceb33de43087a6",
+  "posted": "2026-11-06",
+  "salary": "No salary mentioned",
+  "match": 52,
+  "section": "unlisted",
+  "contract": false,
+  "from_alert": true,
+  "flags": [
+   {
+    "level": "info",
+    "text": "from a job-alert email: open the link to confirm work mode, pay and location"
+   }
+  ],
+  "contact": {
+   "emails": [],
+   "phones": [],
+   "linkedin": []
+  },
+  "source": "Indeed alert",
+  "sent_on": "2026-11-07"
+ },
+ {
   "id": "78a0292c3852a2ca",
   "title": "Quality Analyst with Akeneo",
   "company": "Akeneo",
