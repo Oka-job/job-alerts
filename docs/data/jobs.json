@@ -1,5 +1,56 @@
 [
  {
+  "id": "42db08f5c68f7a10",
+  "title": "Procurement Lead",
+  "company": "Jobgether",
+  "location": "India",
+  "mode": "remote",
+  "eligibility": "yes",
+  "url": "https://jobs.lever.co/jobgether/37e5bd24-c319-4b20-8d6f-3ec38a31beba",
+  "posted": "2026-11-13",
+  "salary": "No salary mentioned",
+  "match": 57,
+  "section": "unlisted",
+  "contract": false,
+  "from_alert": false,
+  "flags": [],
+  "contact": {
+   "emails": [],
+   "phones": [],
+   "linkedin": []
+  },
+  "source": "Lever",
+  "sent_on": "2026-11-14"
+ },
+ {
+  "id": "e7fde5a3bfd01bec",
+  "title": "Deputy Manager - Ecommerce",
+  "company": "AxisMaxlife",
+  "location": "Remote",
+  "mode": "remote",
+  "eligibility": "yes",
+  "url": "https://in.indeed.com/viewjob?jk=82c5c2bfdadabd27",
+  "posted": "2026-11-13",
+  "salary": "No salary mentioned",
+  "match": 52,
+  "section": "unlisted",
+  "contract": false,
+  "from_alert": true,
+  "flags": [
+   {
+    "level": "info",
+    "text": "from a job-alert email: open the link to confirm work mode, pay and location"
+   }
+  ],
+  "contact": {
+   "emails": [],
+   "phones": [],
+   "linkedin": []
+  },
+  "source": "Indeed alert",
+  "sent_on": "2026-11-14"
+ },
+ {
   "id": "21a2440186c79986",
   "title": "Master Data Management(MDM)Analyst -  Remote  // Timings: 6 PM To 3 AM",
   "company": "Enternet Business Systems",
