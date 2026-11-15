@@ -1,5 +1,61 @@
 [
  {
+  "id": "2d833a3443222766",
+  "title": "E-Commerce Content Executive",
+  "company": "Burhan Technology Computer Co. W.L.L.",
+  "location": "Remote",
+  "mode": "remote",
+  "eligibility": "yes",
+  "url": "https://in.indeed.com/viewjob?jk=f6884224379159aa",
+  "posted": "2026-11-14",
+  "salary": "No salary mentioned",
+  "match": 64,
+  "section": "unlisted",
+  "contract": false,
+  "from_alert": true,
+  "flags": [
+   {
+    "level": "info",
+    "text": "from a job-alert email: open the link to confirm work mode, pay and location"
+   }
+  ],
+  "contact": {
+   "emails": [],
+   "phones": [],
+   "linkedin": []
+  },
+  "source": "Indeed alert",
+  "sent_on": "2026-11-15"
+ },
+ {
+  "id": "491b22cc90633a90",
+  "title": "Fashion Ecommerce Trainee",
+  "company": "LYKE TRENDS",
+  "location": "Remote",
+  "mode": "remote",
+  "eligibility": "yes",
+  "url": "https://in.indeed.com/viewjob?jk=63aea5c1c33b53b1",
+  "posted": "2026-11-14",
+  "salary": "No salary mentioned",
+  "match": 58,
+  "section": "unlisted",
+  "contract": false,
+  "from_alert": true,
+  "flags": [
+   {
+    "level": "info",
+    "text": "from a job-alert email: open the link to confirm work mode, pay and location"
+   }
+  ],
+  "contact": {
+   "emails": [],
+   "phones": [],
+   "linkedin": []
+  },
+  "source": "Indeed alert",
+  "sent_on": "2026-11-15"
+ },
+ {
   "id": "42db08f5c68f7a10",
   "title": "Procurement Lead",
   "company": "Jobgether",
